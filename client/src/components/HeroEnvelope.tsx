@@ -88,8 +88,9 @@ export const HeroEnvelope: React.FC<HeroEnvelopeProps> = ({ settings, onOpenExpe
                   alt={`Our favorite picture together with ${settings.recipientName}`}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   onError={(e) => {
-                    // Fallback to placeholder if upload missing
-                    (e.target as HTMLImageElement).src = '/placeholders/hero_together.jpg';
+                    const target = e.currentTarget;
+                    target.onerror = null;
+                    target.src = '/placeholders/hero_together.jpg';
                   }}
                 />
                 

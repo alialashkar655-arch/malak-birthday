@@ -18,20 +18,22 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ customAudioUrl }) => {
   const userManuallyPausedRef = useRef<boolean>(false);
   const listenersCleanedRef = useRef<boolean>(false);
 
+  const isStartingRef = useRef<boolean>(false);
+
   const cleanupListeners = useCallback(() => {
     if (listenersCleanedRef.current) return;
     listenersCleanedRef.current = true;
-    document.removeEventListener('click', handleInteraction, true);
-    document.removeEventListener('touchend', handleInteraction, true);
-    document.removeEventListener('pointerup', handleInteraction, true);
-    document.removeEventListener('keydown', handleInteraction, true);
+    document.removeEventListener('pointerdown', handleInteraction);
+    document.removeEventListener('click', handleInteraction);
     window.removeEventListener('start-romantic-music', handleCustomEvent);
   }, []);
 
   const startPlayback = useCallback(() => {
     userManuallyPausedRef.current = false;
+    if (isStartingRef.current) return;
 
     if (audioElementRef.current) {
+      isStartingRef.current = true;
       audioElementRef.current.volume = 0.85;
       audioElementRef.current.muted = isMuted;
 
@@ -40,11 +42,15 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ customAudioUrl }) => {
         promise
           .then(() => {
             setIsPlaying(true);
+            isStartingRef.current = false;
             cleanupListeners();
           })
           .catch((e) => {
-            console.log('Autoplay waiting for first touch gesture:', e.message);
+            isStartingRef.current = false;
+            console.log('Autoplay waiting for touch:', e.message);
           });
+      } else {
+        isStartingRef.current = false;
       }
     }
   }, [isMuted, cleanupListeners]);
@@ -87,14 +93,12 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ customAudioUrl }) => {
     userManuallyPausedRef.current = false;
     listenersCleanedRef.current = false;
 
-    // 1. Attempt immediate autoplay
+    // 1. Try immediate autoplay
     startPlayback();
 
-    // 2. Global capture listeners: triggers on the first touch/click anywhere on page
-    document.addEventListener('click', handleInteraction, true);
-    document.addEventListener('touchend', handleInteraction, true);
-    document.addEventListener('pointerup', handleInteraction, true);
-    document.addEventListener('keydown', handleInteraction, true);
+    // 2. Global listeners on pointerdown and click
+    document.addEventListener('pointerdown', handleInteraction, { passive: true, once: true });
+    document.addEventListener('click', handleInteraction, { passive: true, once: true });
     window.addEventListener('start-romantic-music', handleCustomEvent);
 
     return () => {
@@ -111,10 +115,9 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ customAudioUrl }) => {
         ref={audioElementRef}
         src={audioSrc}
         loop
-        preload="auto"
+        preload="none"
         playsInline
         onEnded={() => {
-          // Replay automatically from start when finished
           if (audioElementRef.current) {
             audioElementRef.current.currentTime = 0;
             audioElementRef.current.play().catch(() => {});

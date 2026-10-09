@@ -78,9 +78,13 @@ export const LoveLettersSection: React.FC<LoveLettersSectionProps> = ({ data, re
                 <img
                   src={data.mainLetter.polaroidUrl || "/placeholders/letter_polaroid.jpg"}
                   alt="Polaroid Memory"
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/placeholders/letter_polaroid.jpg';
+                    const target = e.currentTarget;
+                    target.onerror = null;
+                    target.src = '/placeholders/letter_polaroid.jpg';
                   }}
                 />
               </div>

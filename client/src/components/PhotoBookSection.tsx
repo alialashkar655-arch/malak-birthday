@@ -123,9 +123,13 @@ export const PhotoBookSection: React.FC<PhotoBookSectionProps> = ({ photobook, r
                     <img
                       src={photobook.coverPhotoUrl || "/placeholders/book_cover.jpg"}
                       alt="Album Cover"
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/placeholders/book_cover.jpg';
+                        const target = e.currentTarget;
+                        target.onerror = null;
+                        target.src = '/placeholders/book_cover.jpg';
                       }}
                     />
                   </div>
@@ -183,9 +187,13 @@ export const PhotoBookSection: React.FC<PhotoBookSectionProps> = ({ photobook, r
                       <img
                         src={page.mediaUrl}
                         alt={page.title}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = `/placeholders/book_page${((currentPage - 2) % 4) + 1}.jpg`;
+                          const target = e.currentTarget;
+                          target.onerror = null;
+                          target.src = `/placeholders/book_page${((currentPage - 2) % 4) + 1}.jpg`;
                         }}
                       />
                     </div>

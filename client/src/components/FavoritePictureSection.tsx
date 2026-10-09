@@ -65,9 +65,13 @@ export const FavoritePictureSection: React.FC<FavoritePictureSectionProps> = ({
                   <img
                     src={fav.imageUrl || "/placeholders/favorite_portrait.jpg"}
                     alt={`Favorite picture of ${settings.recipientName}`}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/placeholders/favorite_portrait.jpg';
+                      const target = e.currentTarget;
+                      target.onerror = null;
+                      target.src = '/placeholders/favorite_portrait.jpg';
                     }}
                   />
                   {/* Subtle film grain & light leak effect */}

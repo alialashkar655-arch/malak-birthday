@@ -119,7 +119,9 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
               alt={currentItem.title}
               className="max-h-[75vh] max-w-full object-contain rounded-lg shadow-2xl"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = '/placeholders/gallery_1.jpg';
+                const target = e.currentTarget;
+                target.onerror = null;
+                target.src = '/placeholders/gallery_1.jpg';
               }}
             />
           )}

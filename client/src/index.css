@@ -20,6 +20,25 @@
     color: #4a1521;
     font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
     min-height: 100vh;
+    /* Improve scroll performance */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: none;
+  }
+
+  /* On mobile, remove the expensive dot pattern to save GPU memory */
+  @media (max-width: 768px) {
+    body {
+      background-image: none;
+    }
+  }
+
+  /* Respect reduced motion preference */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 
   /* Custom scrollbar */
@@ -113,4 +132,44 @@ html {
 
 .animate-soft-float {
   animation: softFloat 5s ease-in-out infinite;
+}
+
+/* ============================================================
+   MOBILE PERFORMANCE OPTIMIZATIONS
+   ============================================================ */
+
+
+/* Hint the browser that these elements will be composited */
+.polaroid-frame,
+.paper-texture,
+.animate-pulse,
+.animate-bounce {
+  will-change: auto; /* reset — only elevate on interaction */
+}
+
+/* On mobile, reduce backdrop-blur intensity to avoid repaints */
+@media (max-width: 768px) {
+  /* Simplify backdrop filters */
+  [class*="backdrop-blur"] {
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
+  }
+
+  /* Disable expensive hover scale transforms on touch */
+  .polaroid-frame:hover {
+    transform: none;
+    box-shadow: 
+      0 8px 24px -4px rgba(70, 15, 25, 0.12),
+      0 2px 6px -1px rgba(70, 15, 25, 0.06);
+  }
+
+  /* Limit simultaneous pulse animations on mobile */
+  .animate-pulse {
+    animation-duration: 3s;
+  }
+
+  /* Prevent layout shift from content-visibility on hero section */
+  section:first-of-type {
+    content-visibility: visible;
+  }
 }

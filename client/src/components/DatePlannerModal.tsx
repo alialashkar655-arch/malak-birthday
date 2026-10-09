@@ -255,9 +255,13 @@ export const DatePlanner: React.FC<DatePlannerProps> = ({
                           <img
                             src={opt.imageUrl}
                             alt={opt.title}
+                            loading="lazy"
+                            decoding="async"
                             className="w-full h-full object-cover"
                             onError={(e) => {
-                              (e.target as HTMLImageElement).src = '/placeholders/date_picnic.jpg';
+                              const target = e.currentTarget;
+                              target.onerror = null;
+                              target.src = '/placeholders/date_picnic.jpg';
                             }}
                           />
                         </div>
@@ -312,9 +316,13 @@ export const DatePlanner: React.FC<DatePlannerProps> = ({
                       <img
                         src={fc.imageUrl}
                         alt={fc.title}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = '/placeholders/flowers_red.jpg';
+                          const target = e.currentTarget;
+                          target.onerror = null;
+                          target.src = '/placeholders/flowers_red.jpg';
                         }}
                       />
                     </div>

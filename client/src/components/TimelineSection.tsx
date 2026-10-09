@@ -141,6 +141,7 @@ export const TimelineSection: React.FC<TimelineSectionProps> = ({ entries, onOpe
                             <video
                               src={entry.mediaUrl}
                               className="w-full h-full object-cover"
+                              preload="none"
                               muted
                               playsInline
                             />
@@ -152,9 +153,13 @@ export const TimelineSection: React.FC<TimelineSectionProps> = ({ entries, onOpe
                           <img
                             src={entry.mediaUrl}
                             alt={entry.title}
+                            loading="lazy"
+                            decoding="async"
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                             onError={(e) => {
-                              (e.target as HTMLImageElement).src = `/placeholders/timeline_${(idx % 7) + 1}.jpg`;
+                              const target = e.currentTarget;
+                              target.onerror = null;
+                              target.src = `/placeholders/timeline_${(idx % 7) + 1}.jpg`;
                             }}
                           />
                         )}

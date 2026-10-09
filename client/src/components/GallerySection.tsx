@@ -112,6 +112,7 @@ export const GallerySection: React.FC<GallerySectionProps> = ({
                         <video
                           src={item.mediaUrl}
                           className="w-full h-full object-cover"
+                          preload="none"
                           muted
                           playsInline
                         />
@@ -126,9 +127,12 @@ export const GallerySection: React.FC<GallerySectionProps> = ({
                         src={item.mediaUrl}
                         alt={item.title}
                         loading="lazy"
+                        decoding="async"
                         className="w-full h-auto object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = '/placeholders/gallery_1.jpg';
+                          const target = e.currentTarget;
+                          target.onerror = null;
+                          target.src = '/placeholders/gallery_1.jpg';
                         }}
                       />
                     )}
