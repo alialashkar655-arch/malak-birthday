@@ -190,7 +190,7 @@
       "caption": "A short clip capturing a little glimpse of your laughter.",
       "date": "Memory Clip",
       "category": "Videos",
-      "mediaUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+      "mediaUrl": "/placeholders/memory_video.mp4",
       "mediaType": "video",
       "isFavorite": false,
       "order": 6

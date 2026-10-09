@@ -30,7 +30,7 @@ export const fallbackSettings: SiteSettings = {
     subheading: "Today the world is celebrating the absolute sweetest soul in it.",
     letter: "To my favorite person in the entire world — Happy Birthday! Looking back at all our memories, I'm so grateful for every laugh, every quiet moment, and every adventure we've shared. May this year bring you all the warmth, joy, and dreams you truly deserve. I love you more than words could ever describe.",
     videoUrl: "",
-    audioUrl: "",
+    audioUrl: "/our_song.mp3",
     voiceNoteUrl: ""
   },
   theme: {
@@ -193,6 +193,17 @@ export const fallbackGallery: GalleryItem[] = [
     mediaType: "image",
     isFavorite: true,
     order: 5
+  },
+  {
+    id: "gal-6",
+    title: "Sweet Little Video Clip",
+    caption: "A short clip capturing a little glimpse of your laughter.",
+    date: "Memory Clip",
+    category: "Videos",
+    mediaUrl: "/placeholders/memory_video.mp4",
+    mediaType: "video",
+    isFavorite: false,
+    order: 6
   }
 ];
 
