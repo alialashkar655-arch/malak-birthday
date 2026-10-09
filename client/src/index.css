@@ -20,9 +20,7 @@
     color: #4a1521;
     font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
     min-height: 100vh;
-    /* Improve scroll performance */
     -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: none;
   }
 
   /* On mobile, remove the expensive dot pattern to save GPU memory */
@@ -115,9 +113,11 @@
   transform-style: preserve-3d;
 }
 
-/* Smooth transitions */
-html {
-  scroll-behavior: smooth;
+/* Smooth transitions on desktop (disabled on touch devices to prevent mobile Safari momentum conflict) */
+@media (hover: hover) and (pointer: fine) {
+  html {
+    scroll-behavior: smooth;
+  }
 }
 
 /* Floating animation keyframes */

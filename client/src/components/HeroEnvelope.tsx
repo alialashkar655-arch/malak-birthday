@@ -46,14 +46,14 @@ export const HeroEnvelope: React.FC<HeroEnvelopeProps> = ({ settings, onOpenExpe
   };
 
   return (
-    <section className="relative min-h-[92vh] flex items-center justify-center py-16 px-4 overflow-hidden">
+    <section className="relative min-h-[90svh] sm:min-h-[92vh] flex items-center justify-center py-16 px-4 overflow-hidden">
       {/* Decorative background sparkles & floating hearts */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-12 left-10 text-rose-300/60 animate-bounce duration-1000 text-2xl select-none">♡</div>
         <div className="absolute top-1/4 right-12 text-rose-400/50 animate-pulse text-3xl select-none">✨</div>
         <div className="absolute bottom-24 left-1/5 text-rose-300/40 text-xl animate-soft-float select-none">🌸</div>
         <div className="absolute bottom-1/3 right-1/4 text-rose-300/40 text-2xl select-none">♡</div>
-        <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-96 h-96 bg-rose-100/50 rounded-full blur-3xl -z-10" />
+        <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full bg-[radial-gradient(circle,rgba(255,228,230,0.7)_0%,transparent_70%)] pointer-events-none -z-10" />
       </div>
 
       <div className="max-w-4xl w-full mx-auto text-center relative z-10 flex flex-col items-center">

@@ -193,7 +193,7 @@ export function App() {
   }
 
   return (
-    <div className="min-h-screen relative flex flex-col selection:bg-rose-200 selection:text-rose-900">
+    <div className="min-h-screen relative flex flex-col selection:bg-rose-200 selection:text-rose-900 overflow-x-hidden">
       {/* Desktop Custom Sparkling Cursor */}
       <CustomCursor />
 

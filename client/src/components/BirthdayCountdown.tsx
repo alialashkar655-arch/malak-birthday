@@ -34,15 +34,28 @@ export const BirthdayCountdown: React.FC<BirthdayCountdownProps> = ({
 
   useEffect(() => {
     const calculateTime = () => {
-      // November 20, 2026 in Africa/Cairo (UTC+2 or UTC+3 depending on DST)
-      // Parse settings.birthdayDate (default "2026-11-20")
-      const targetDateStr = `${settings.birthdayDate || '2026-11-20'}T00:00:00+02:00`;
-      const targetTime = new Date(targetDateStr).getTime();
-      const now = new Date().getTime();
+      let targetTime = 0;
+      try {
+        const rawDate = (settings.birthdayDate || '2026-11-20').trim();
+        const parts = rawDate.split('-');
+        if (parts.length === 3) {
+          const y = parseInt(parts[0], 10);
+          const m = parseInt(parts[1], 10) - 1;
+          const d = parseInt(parts[2], 10);
+          targetTime = new Date(y, m, d, 0, 0, 0).getTime();
+        } else {
+          targetTime = new Date(rawDate).getTime();
+        }
+      } catch {
+        targetTime = new Date(2026, 10, 20, 0, 0, 0).getTime();
+      }
 
-      // Check if current date is the birthday day (within 24 hours of start of birthday)
+      if (!targetTime || isNaN(targetTime)) {
+        targetTime = new Date(2026, 10, 20, 0, 0, 0).getTime();
+      }
+
+      const now = Date.now();
       const birthdayEnd = targetTime + 24 * 60 * 60 * 1000;
-
       const difference = targetTime - now;
 
       if (now >= targetTime && now < birthdayEnd) {
@@ -64,10 +77,11 @@ export const BirthdayCountdown: React.FC<BirthdayCountdownProps> = ({
           isPast: true
         });
       } else {
-        const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+        const totalSec = Math.max(0, Math.floor(difference / 1000));
+        const days = Math.floor(totalSec / 86400);
+        const hours = Math.floor((totalSec % 86400) / 3600);
+        const minutes = Math.floor((totalSec % 3600) / 60);
+        const seconds = totalSec % 60;
 
         setTimeLeft({
           days,
@@ -112,8 +126,8 @@ export const BirthdayCountdown: React.FC<BirthdayCountdownProps> = ({
 
   return (
     <section id="birthday-section" className="py-20 px-4 relative overflow-hidden">
-      {/* Decorative gradient glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-rose-200/30 rounded-full blur-3xl pointer-events-none -z-10" />
+      {/* Decorative gradient glow (using lightweight radial gradient instead of heavy blur-3xl) */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] max-w-full rounded-full bg-[radial-gradient(circle,rgba(254,205,211,0.35)_0%,transparent_70%)] pointer-events-none -z-10" />
 
       <div className="max-w-4xl mx-auto">
         {/* Card Container */}
