@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Volume2, VolumeX, Music, Disc } from 'lucide-react';
 
 interface AudioPlayerProps {
@@ -6,7 +6,7 @@ interface AudioPlayerProps {
 }
 
 export const AudioPlayer: React.FC<AudioPlayerProps> = ({ customAudioUrl }) => {
-  // Always fallback to /our_song.mp3 if customAudioUrl is missing or empty
+  // Always default directly to /our_song.mp3
   const audioSrc = (customAudioUrl && customAudioUrl.trim() !== '') 
     ? customAudioUrl.trim() 
     : '/our_song.mp3';
@@ -16,23 +16,48 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ customAudioUrl }) => {
 
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const userManuallyPausedRef = useRef<boolean>(false);
+  const listenersCleanedRef = useRef<boolean>(false);
 
-  const startPlayback = () => {
+  const cleanupListeners = useCallback(() => {
+    if (listenersCleanedRef.current) return;
+    listenersCleanedRef.current = true;
+    document.removeEventListener('click', handleInteraction, true);
+    document.removeEventListener('touchend', handleInteraction, true);
+    document.removeEventListener('pointerup', handleInteraction, true);
+    document.removeEventListener('keydown', handleInteraction, true);
+    window.removeEventListener('start-romantic-music', handleCustomEvent);
+  }, []);
+
+  const startPlayback = useCallback(() => {
     userManuallyPausedRef.current = false;
 
     if (audioElementRef.current) {
       audioElementRef.current.volume = 0.85;
       audioElementRef.current.muted = isMuted;
-      audioElementRef.current
-        .play()
-        .then(() => {
-          setIsPlaying(true);
-        })
-        .catch((e) => {
-          console.log('Autoplay waiting for first touch/click interaction:', e);
-        });
+
+      const promise = audioElementRef.current.play();
+      if (promise !== undefined) {
+        promise
+          .then(() => {
+            setIsPlaying(true);
+            cleanupListeners();
+          })
+          .catch((e) => {
+            console.log('Autoplay waiting for first touch gesture:', e.message);
+          });
+      }
     }
-  };
+  }, [isMuted, cleanupListeners]);
+
+  const handleInteraction = useCallback(() => {
+    if (!userManuallyPausedRef.current) {
+      startPlayback();
+    }
+  }, [startPlayback]);
+
+  const handleCustomEvent = useCallback(() => {
+    startPlayback();
+  }, [startPlayback]);
 
   const stopPlayback = () => {
     userManuallyPausedRef.current = true;
@@ -58,39 +83,24 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ customAudioUrl }) => {
     }
   };
 
-  // Autoplay on mount + global first user gesture listener (click, touch, scroll, keydown)
   useEffect(() => {
     userManuallyPausedRef.current = false;
+    listenersCleanedRef.current = false;
 
-    // 1. Try immediate autoplay
+    // 1. Attempt immediate autoplay
     startPlayback();
 
-    // 2. Browser autoplay policy: if blocked without interaction, play on the very first touch/click
-    const handleFirstUserInteraction = () => {
-      if (!userManuallyPausedRef.current) {
-        startPlayback();
-      }
-      removeListeners();
-    };
-
-    const removeListeners = () => {
-      window.removeEventListener('click', handleFirstUserInteraction);
-      window.removeEventListener('touchstart', handleFirstUserInteraction);
-      window.removeEventListener('pointerdown', handleFirstUserInteraction);
-      window.removeEventListener('keydown', handleFirstUserInteraction);
-      window.removeEventListener('scroll', handleFirstUserInteraction);
-    };
-
-    window.addEventListener('click', handleFirstUserInteraction, { passive: true });
-    window.addEventListener('touchstart', handleFirstUserInteraction, { passive: true });
-    window.addEventListener('pointerdown', handleFirstUserInteraction, { passive: true });
-    window.addEventListener('keydown', handleFirstUserInteraction, { passive: true });
-    window.addEventListener('scroll', handleFirstUserInteraction, { passive: true });
+    // 2. Global capture listeners: triggers on the first touch/click anywhere on page
+    document.addEventListener('click', handleInteraction, true);
+    document.addEventListener('touchend', handleInteraction, true);
+    document.addEventListener('pointerup', handleInteraction, true);
+    document.addEventListener('keydown', handleInteraction, true);
+    window.addEventListener('start-romantic-music', handleCustomEvent);
 
     return () => {
-      removeListeners();
+      cleanupListeners();
     };
-  }, [audioSrc]);
+  }, [audioSrc, startPlayback, handleInteraction, handleCustomEvent, cleanupListeners]);
 
   return (
     <aside
@@ -104,7 +114,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ customAudioUrl }) => {
         preload="auto"
         playsInline
         onEnded={() => {
-          // Replay automatically when finished
+          // Replay automatically from start when finished
           if (audioElementRef.current) {
             audioElementRef.current.currentTime = 0;
             audioElementRef.current.play().catch(() => {});
@@ -141,7 +151,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ customAudioUrl }) => {
           Our Song ♡
         </span>
         <span className="text-[10px] text-rose-500 font-serif italic">
-          {isPlaying ? 'Playing on loop ♡' : 'Click to play music'}
+          {isPlaying ? 'Playing on loop ♡' : 'Tap anywhere to play'}
         </span>
       </div>
 

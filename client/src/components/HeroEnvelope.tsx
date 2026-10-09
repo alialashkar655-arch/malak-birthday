@@ -16,6 +16,13 @@ export const HeroEnvelope: React.FC<HeroEnvelopeProps> = ({ settings, onOpenExpe
     if (isOpening || isOpen) return;
     setIsOpening(true);
 
+    // Immediately trigger romantic music on envelope open
+    try {
+      window.dispatchEvent(new Event('start-romantic-music'));
+    } catch {
+      // ignore
+    }
+
     // Sweet confetti burst
     confetti({
       particleCount: 70,
