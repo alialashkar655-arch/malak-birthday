@@ -199,7 +199,7 @@ export function App() {
 
       {/* Floating Ambient Music Player */}
       {settings.sectionVisibility?.audioPlayer !== false && (
-        <AudioPlayer customAudioUrl={settings.birthdayMessage?.audioUrl} />
+        <AudioPlayer customAudioUrl={settings.birthdayMessage?.audioUrl?.trim() || '/our_song.mp3'} />
       )}
 
       {/* Floating Quick Heart Burst Button & Easter Egg */}
