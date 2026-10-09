@@ -1,0 +1,17 @@
+{
+  "name": "malak-birthday-universe",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Our Little Universe ♡ — A romantic memory website for Malak",
+  "scripts": {
+    "dev": "concurrently -n \"server,client\" -c \"magenta,cyan\" \"npm --prefix server run dev\" \"npm --prefix client run dev\"",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "build": "npm --prefix server run build && npm --prefix client run build",
+    "start": "npm --prefix server run start",
+    "test": "node test-api.js"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
