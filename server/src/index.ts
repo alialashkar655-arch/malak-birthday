@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
 import { fileURLToPath } from 'url';
 import multer from 'multer';
 import crypto from 'crypto';
@@ -16,9 +17,16 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Setup directories
-const UPLOADS_DIR = path.resolve(__dirname, '../uploads');
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+const UPLOADS_DIR = process.env.VERCEL
+  ? path.join(os.tmpdir(), 'malak_uploads')
+  : path.resolve(__dirname, '../uploads');
+
+try {
+  if (!fs.existsSync(UPLOADS_DIR)) {
+    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+  }
+} catch {
+  // Ignore error on read-only environments
 }
 
 // Multer storage
@@ -548,9 +556,14 @@ if (fs.existsSync(CLIENT_DIST)) {
 }
 
 /* =========================================================
-   START SERVER
+   EXPORT & START SERVER
 ========================================================= */
 
-app.listen(PORT, () => {
-  console.log(`❤️ Romantic Memory Server running on http://localhost:${PORT}`);
-});
+export { app };
+export default app;
+
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`❤️ Romantic Memory Server running on http://localhost:${PORT}`);
+  });
+}

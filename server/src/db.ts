@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import os from 'os';
 import { fileURLToPath } from 'url';
 import { DatabaseSchema, SiteSettings } from './types.js';
 
@@ -8,6 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DATA_DIR = path.resolve(__dirname, '../data');
 const DB_FILE = path.join(DATA_DIR, 'database.json');
+const TMP_DB_FILE = path.join(os.tmpdir(), 'malak_database.json');
 
 // Simple secure password hashing using Node crypto scrypt
 export function hashPassword(password: string): string {
@@ -536,17 +538,34 @@ class Database {
   }
 
   private ensureDataDir() {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
+    try {
+      if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      }
+    } catch {
+      // Read-only serverless filesystem (e.g. Vercel), ignore
     }
   }
 
   private loadData(): DatabaseSchema {
     try {
+      // 1. Check /tmp first (if updated in this serverless instance)
+      if (fs.existsSync(TMP_DB_FILE)) {
+        const raw = fs.readFileSync(TMP_DB_FILE, 'utf-8');
+        const parsed = JSON.parse(raw);
+        return {
+          ...initialData,
+          ...parsed,
+          settings: { ...initialData.settings, ...(parsed.settings || {}) },
+          photobook: { ...initialData.photobook, ...(parsed.photobook || {}) },
+          loveLetters: { ...initialData.loveLetters, ...(parsed.loveLetters || {}) },
+          dateInvitation: { ...initialData.dateInvitation, ...(parsed.dateInvitation || {}) }
+        };
+      }
+      // 2. Check repo database.json file
       if (fs.existsSync(DB_FILE)) {
         const raw = fs.readFileSync(DB_FILE, 'utf-8');
         const parsed = JSON.parse(raw);
-        // Ensure all required fields exist
         return {
           ...initialData,
           ...parsed,
@@ -557,23 +576,30 @@ class Database {
         };
       }
     } catch (err) {
-      console.error('Error reading database file, using defaults:', err);
+      console.warn('Could not read disk database, using defaults:', err);
     }
-    // Write defaults
-    this.persist(initialData);
+    // Write defaults if possible
+    try {
+      this.persist(initialData);
+    } catch {
+      // ignore
+    }
     return initialData;
   }
 
   private persist(dataToSave: DatabaseSchema) {
-    this.ensureDataDir();
-    const tempFile = `${DB_FILE}.${Date.now()}.tmp`;
     try {
+      this.ensureDataDir();
+      const tempFile = `${DB_FILE}.${Date.now()}.tmp`;
       fs.writeFileSync(tempFile, JSON.stringify(dataToSave, null, 2), 'utf-8');
       fs.renameSync(tempFile, DB_FILE);
-    } catch (err) {
-      console.error('Error persisting database:', err);
-      if (fs.existsSync(tempFile)) {
-        fs.unlinkSync(tempFile);
+      return;
+    } catch {
+      // In serverless / Vercel read-only system, save to /tmp instead
+      try {
+        fs.writeFileSync(TMP_DB_FILE, JSON.stringify(dataToSave, null, 2), 'utf-8');
+      } catch (err) {
+        console.warn('Persist to tmp also unavailable:', err);
       }
     }
   }
