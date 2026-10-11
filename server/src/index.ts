@@ -6,7 +6,8 @@ import os from 'os';
 import { fileURLToPath } from 'url';
 import multer from 'multer';
 import crypto from 'crypto';
-import { db } from './db.js';
+import 'dotenv/config';
+import { db, initDatabase } from './db.js';
 import { requireAdmin, loginAdmin, isValidAdminToken, revokeAdminToken, changeAdminPassword } from './auth.js';
 import { DateSubmission, TimelineEntry, GalleryItem, PhotobookPage } from './types.js';
 
@@ -562,8 +563,15 @@ if (fs.existsSync(CLIENT_DIST)) {
 export { app };
 export default app;
 
+// Local development: initialize DB and start server
+// On Vercel, api/index.ts handles initialization
 if (!process.env.VERCEL) {
-  app.listen(PORT, () => {
-    console.log(`❤️ Romantic Memory Server running on http://localhost:${PORT}`);
+  initDatabase().then(() => {
+    app.listen(PORT, () => {
+      console.log(`❤️ Romantic Memory Server running on http://localhost:${PORT}`);
+    });
+  }).catch(err => {
+    console.error('Failed to start server:', err);
+    process.exit(1);
   });
 }

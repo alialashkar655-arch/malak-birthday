@@ -4,12 +4,15 @@ import crypto from 'crypto';
 import os from 'os';
 import { fileURLToPath } from 'url';
 import { DatabaseSchema, SiteSettings } from './types.js';
+import { connectMongo, mongoLoad, mongoSave } from './mongodb.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DATA_DIR = path.resolve(__dirname, '../data');
 const DB_FILE = path.join(DATA_DIR, 'database.json');
 const TMP_DB_FILE = path.join(os.tmpdir(), 'malak_database.json');
+
+const MONGO_URI = process.env.MONGODB_URI || '';
 
 // Simple secure password hashing using Node crypto scrypt
 export function hashPassword(password: string): string {
@@ -528,13 +531,36 @@ const initialData: DatabaseSchema = {
   dateSubmissions: []
 };
 
-// Database manager with atomic writes
+// Database manager — supports MongoDB (production) and file-based (local dev)
 class Database {
   private data: DatabaseSchema;
+  private usingMongo: boolean = false;
 
   constructor() {
-    this.ensureDataDir();
-    this.data = this.loadData();
+    // Start with in-memory data (overridden by init())
+    this.data = this.loadFromFile();
+  }
+
+  /**
+   * Must be called at server startup.
+   * If MONGODB_URI is set, connects and loads data from MongoDB.
+   * Otherwise falls back to the local file-based database.
+   */
+  public async init(): Promise<void> {
+    if (MONGO_URI) {
+      try {
+        await connectMongo(MONGO_URI);
+        this.data = await mongoLoad(initialData);
+        this.usingMongo = true;
+        console.log('📦 Database loaded from MongoDB');
+      } catch (err) {
+        console.error('❌ MongoDB connection failed, falling back to file DB:', err);
+        this.data = this.loadFromFile();
+      }
+    } else {
+      console.log('📁 No MONGODB_URI found, using local file database');
+      this.data = this.loadFromFile();
+    }
   }
 
   private ensureDataDir() {
@@ -547,7 +573,7 @@ class Database {
     }
   }
 
-  private loadData(): DatabaseSchema {
+  private loadFromFile(): DatabaseSchema {
     try {
       // 1. Check /tmp first (if updated in this serverless instance)
       if (fs.existsSync(TMP_DB_FILE)) {
@@ -580,14 +606,14 @@ class Database {
     }
     // Write defaults if possible
     try {
-      this.persist(initialData);
+      this.persistToFile(initialData);
     } catch {
       // ignore
     }
-    return initialData;
+    return { ...initialData };
   }
 
-  private persist(dataToSave: DatabaseSchema) {
+  private persistToFile(dataToSave: DatabaseSchema) {
     try {
       this.ensureDataDir();
       const tempFile = `${DB_FILE}.${Date.now()}.tmp`;
@@ -609,7 +635,14 @@ class Database {
   }
 
   public save() {
-    this.persist(this.data);
+    if (this.usingMongo) {
+      // Fire-and-forget async save to MongoDB
+      mongoSave(this.data).catch(err => {
+        console.error('❌ MongoDB save failed:', err);
+      });
+    } else {
+      this.persistToFile(this.data);
+    }
   }
 
   public getSettings(): SiteSettings {
@@ -630,3 +663,11 @@ class Database {
 }
 
 export const db = new Database();
+
+/**
+ * Call this once at server startup before handling any requests.
+ * Connects to MongoDB if MONGODB_URI env var is set.
+ */
+export async function initDatabase(): Promise<void> {
+  await db.init();
+}
