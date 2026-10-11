@@ -13,13 +13,15 @@ interface AdminSession {
 const localSessions = new Map<string, AdminSession>();
 const SESSION_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-const MONGO_URI = process.env.MONGODB_URI || '';
+function getMongoUri(): string {
+  return process.env.MONGODB_URI || '';
+}
 
 export async function createAdminSession(): Promise<string> {
   const token = crypto.randomBytes(32).toString('hex');
   const now = Date.now();
 
-  if (MONGO_URI) {
+  if (getMongoUri()) {
     // Persist session in MongoDB so it survives across serverless instances
     await mongoCreateSession(token, SESSION_TTL);
   } else {
@@ -32,7 +34,7 @@ export async function createAdminSession(): Promise<string> {
 export async function isValidAdminToken(token: string): Promise<boolean> {
   if (!token) return false;
 
-  if (MONGO_URI) {
+  if (getMongoUri()) {
     return mongoIsValidToken(token);
   }
 
@@ -47,7 +49,7 @@ export async function isValidAdminToken(token: string): Promise<boolean> {
 }
 
 export async function revokeAdminToken(token: string): Promise<void> {
-  if (MONGO_URI) {
+  if (getMongoUri()) {
     await mongoRevokeToken(token);
   } else {
     localSessions.delete(token);

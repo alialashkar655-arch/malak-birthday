@@ -75,14 +75,16 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Favorite button */}
-          <button
-            onClick={() => onToggleFavorite(currentItem)}
-            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-rose-400 hover:text-rose-300 transition-colors"
-            title="Mark as favorite"
-          >
-            <Heart className={`w-5 h-5 ${currentItem.isFavorite ? 'fill-rose-500 text-rose-500' : ''}`} />
-          </button>
+          {/* Favorite button — only for real gallery items, not temp previews */}
+          {!currentItem.id.startsWith('temp-') && (
+            <button
+              onClick={() => onToggleFavorite(currentItem)}
+              className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-rose-400 hover:text-rose-300 transition-colors"
+              title="Mark as favorite"
+            >
+              <Heart className={`w-5 h-5 ${currentItem.isFavorite ? 'fill-rose-500 text-rose-500' : ''}`} />
+            </button>
+          )}
 
           {/* Close button */}
           <button

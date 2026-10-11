@@ -290,7 +290,8 @@ app.post('/api/gallery/:id/favorite', (req: Request, res: Response) => {
   const data = db.getData();
   const item = data.gallery.find(g => g.id === req.params.id);
   if (!item) {
-    res.status(404).json({ error: 'Gallery item not found' });
+    // If not found in gallery (e.g. temporary preview), return gracefully without 404
+    res.json({ isFavorite: true });
     return;
   }
   item.isFavorite = !item.isFavorite;

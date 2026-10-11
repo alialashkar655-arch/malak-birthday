@@ -547,9 +547,10 @@ class Database {
    * Otherwise falls back to the local file-based database.
    */
   public async init(): Promise<void> {
-    if (MONGO_URI) {
+    const mongoUri = process.env.MONGODB_URI || '';
+    if (mongoUri) {
       try {
-        await connectMongo(MONGO_URI);
+        await connectMongo(mongoUri);
         this.data = await mongoLoad(initialData);
         this.usingMongo = true;
         console.log('📦 Database loaded from MongoDB');

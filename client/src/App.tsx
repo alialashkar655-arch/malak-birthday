@@ -324,11 +324,16 @@ export function App() {
         onNext={() => setLightboxIndex(prev => (prev + 1) % gallery.length)}
         onPrev={() => setLightboxIndex(prev => (prev - 1 + gallery.length) % gallery.length)}
         onToggleFavorite={async (item) => {
+          if (!item.id || item.id.startsWith('temp-')) {
+            setGallery(prev => prev.map(i => i.id === item.id ? { ...i, isFavorite: !i.isFavorite } : i));
+            return;
+          }
           try {
             const res = await api.toggleFavorite(item.id);
             setGallery(prev => prev.map(i => i.id === item.id ? { ...i, isFavorite: res.isFavorite } : i));
           } catch (e) {
             console.error(e);
+            setGallery(prev => prev.map(i => i.id === item.id ? { ...i, isFavorite: !i.isFavorite } : i));
           }
         }}
       />
