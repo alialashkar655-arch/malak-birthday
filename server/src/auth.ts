@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
 import { db, verifyPassword, hashPassword } from './db.js';
+import { mongoCreateSession, mongoIsValidToken, mongoRevokeToken } from './mongodb.js';
 
 interface AdminSession {
   token: string;
@@ -8,36 +9,52 @@ interface AdminSession {
   expiresAt: number;
 }
 
-const sessions = new Map<string, AdminSession>();
+// In-memory fallback (local dev without MongoDB)
+const localSessions = new Map<string, AdminSession>();
 const SESSION_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-export function createAdminSession(): string {
+const MONGO_URI = process.env.MONGODB_URI || '';
+
+export async function createAdminSession(): Promise<string> {
   const token = crypto.randomBytes(32).toString('hex');
   const now = Date.now();
-  sessions.set(token, {
-    token,
-    createdAt: now,
-    expiresAt: now + SESSION_TTL
-  });
+
+  if (MONGO_URI) {
+    // Persist session in MongoDB so it survives across serverless instances
+    await mongoCreateSession(token, SESSION_TTL);
+  } else {
+    localSessions.set(token, { token, createdAt: now, expiresAt: now + SESSION_TTL });
+  }
+
   return token;
 }
 
-export function isValidAdminToken(token: string): boolean {
+export async function isValidAdminToken(token: string): Promise<boolean> {
   if (!token) return false;
-  const session = sessions.get(token);
+
+  if (MONGO_URI) {
+    return mongoIsValidToken(token);
+  }
+
+  // Local fallback
+  const session = localSessions.get(token);
   if (!session) return false;
   if (Date.now() > session.expiresAt) {
-    sessions.delete(token);
+    localSessions.delete(token);
     return false;
   }
   return true;
 }
 
-export function revokeAdminToken(token: string) {
-  sessions.delete(token);
+export async function revokeAdminToken(token: string): Promise<void> {
+  if (MONGO_URI) {
+    await mongoRevokeToken(token);
+  } else {
+    localSessions.delete(token);
+  }
 }
 
-// Middleware to protect admin routes
+// Async middleware to protect admin routes
 export function requireAdmin(req: Request, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -46,22 +63,28 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction): v
   }
 
   const token = authHeader.substring(7).trim();
-  if (!isValidAdminToken(token)) {
-    res.status(401).json({ error: 'Unauthorized: Session expired or invalid' });
-    return;
-  }
 
-  next();
+  // Use async validation
+  isValidAdminToken(token).then(valid => {
+    if (!valid) {
+      res.status(401).json({ error: 'Unauthorized: Session expired or invalid' });
+      return;
+    }
+    next();
+  }).catch(err => {
+    console.error('Auth check error:', err);
+    res.status(500).json({ error: 'Internal server error during auth check' });
+  });
 }
 
 // Handle login
-export function loginAdmin(password: string): { success: boolean; token?: string; error?: string } {
+export async function loginAdmin(password: string): Promise<{ success: boolean; token?: string; error?: string }> {
   const settings = db.getSettings();
   const isValid = verifyPassword(password, settings.adminPasswordHash);
   if (!isValid) {
     return { success: false, error: 'Incorrect password' };
   }
-  const token = createAdminSession();
+  const token = await createAdminSession();
   return { success: true, token };
 }
 

@@ -60,3 +60,44 @@ export async function mongoSave(data: DatabaseSchema): Promise<void> {
     { upsert: true, new: true }
   );
 }
+
+// --- MongoDB-backed admin sessions (survives serverless cold starts) ---
+
+interface ISession extends Document {
+  token: string;
+  expiresAt: Date;
+}
+
+const SessionSchema = new Schema<ISession>({
+  token: { type: String, required: true, unique: true },
+  expiresAt: { type: Date, required: true, index: { expires: 0 } } // TTL index: auto-delete when expired
+});
+
+let SessionModel: Model<ISession>;
+
+function getSessionModel(): Model<ISession> {
+  if (!SessionModel) {
+    SessionModel = (mongoose.models['Session'] as Model<ISession>) ||
+      mongoose.model<ISession>('Session', SessionSchema);
+  }
+  return SessionModel;
+}
+
+/** Save a new session token to MongoDB */
+export async function mongoCreateSession(token: string, ttlMs: number): Promise<void> {
+  const Session = getSessionModel();
+  await Session.create({ token, expiresAt: new Date(Date.now() + ttlMs) });
+}
+
+/** Check if a token is valid (not expired, exists in DB) */
+export async function mongoIsValidToken(token: string): Promise<boolean> {
+  const Session = getSessionModel();
+  const doc = await Session.findOne({ token, expiresAt: { $gt: new Date() } });
+  return doc !== null;
+}
+
+/** Remove a session token (logout) */
+export async function mongoRevokeToken(token: string): Promise<void> {
+  const Session = getSessionModel();
+  await Session.deleteOne({ token });
+}

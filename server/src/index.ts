@@ -73,13 +73,13 @@ if (fs.existsSync(CLIENT_PUBLIC)) {
    AUTHENTICATION ENDPOINTS
 ========================================================= */
 
-app.post('/api/auth/login', (req: Request, res: Response) => {
+app.post('/api/auth/login', async (req: Request, res: Response) => {
   const { password } = req.body;
   if (!password) {
     res.status(400).json({ error: 'Password is required' });
     return;
   }
-  const result = loginAdmin(password);
+  const result = await loginAdmin(password);
   if (!result.success) {
     res.status(401).json({ error: result.error });
     return;
@@ -87,20 +87,21 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
   res.json({ token: result.token });
 });
 
-app.get('/api/auth/verify', (req: Request, res: Response) => {
+app.get('/api/auth/verify', async (req: Request, res: Response) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     res.json({ valid: false });
     return;
   }
   const token = authHeader.substring(7).trim();
-  res.json({ valid: isValidAdminToken(token) });
+  const valid = await isValidAdminToken(token);
+  res.json({ valid });
 });
 
-app.post('/api/auth/logout', (req: Request, res: Response) => {
+app.post('/api/auth/logout', async (req: Request, res: Response) => {
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
-    revokeAdminToken(authHeader.substring(7).trim());
+    await revokeAdminToken(authHeader.substring(7).trim());
   }
   res.json({ success: true });
 });
