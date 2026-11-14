@@ -154,9 +154,15 @@ export function App() {
     }
   };
 
+  // Floating Ambient Music Player - Mounted immediately on page load so music plays without delay
+  const audioPlayerComponent = (!settings || settings.sectionVisibility?.audioPlayer !== false) && (
+    <AudioPlayer customAudioUrl={settings?.birthdayMessage?.audioUrl?.trim() || '/our_song.mp3'} />
+  );
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#faf5f3] flex flex-col items-center justify-center p-4 text-center">
+        {audioPlayerComponent}
         <div className="w-16 h-16 rounded-full bg-rose-100 flex items-center justify-center text-rose-500 mb-4 animate-bounce">
           <Heart className="w-8 h-8 fill-rose-500" />
         </div>
@@ -173,6 +179,7 @@ export function App() {
   if (error || !settings || !photobook || !loveLetters || !dateInvitation) {
     return (
       <div className="min-h-screen bg-[#faf5f3] flex flex-col items-center justify-center p-4 text-center">
+        {audioPlayerComponent}
         <div className="paper-texture p-8 rounded-3xl border border-rose-300 max-w-md shadow-xl">
           <AlertCircle className="w-12 h-12 text-rose-500 mx-auto mb-3" />
           <h2 className="font-serif text-2xl font-bold text-rose-950 mb-2">
@@ -194,13 +201,10 @@ export function App() {
 
   return (
     <div className="min-h-screen relative flex flex-col selection:bg-rose-200 selection:text-rose-900 overflow-x-hidden">
+      {audioPlayerComponent}
+
       {/* Desktop Custom Sparkling Cursor */}
       <CustomCursor />
-
-      {/* Floating Ambient Music Player */}
-      {settings.sectionVisibility?.audioPlayer !== false && (
-        <AudioPlayer customAudioUrl={settings.birthdayMessage?.audioUrl?.trim() || '/our_song.mp3'} />
-      )}
 
       {/* Floating Quick Heart Burst Button & Easter Egg */}
       <FloatingHeartsButton recipientName={settings.recipientName} />

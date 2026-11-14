@@ -5,6 +5,17 @@ interface AudioPlayerProps {
   customAudioUrl?: string;
 }
 
+const INTERACTION_EVENTS = [
+  'click',
+  'pointerdown',
+  'touchstart',
+  'touchend',
+  'mousedown',
+  'keydown',
+  'scroll',
+  'wheel'
+] as const;
+
 export const AudioPlayer: React.FC<AudioPlayerProps> = ({ customAudioUrl }) => {
   // Always default directly to /our_song.mp3
   const audioSrc = (customAudioUrl && customAudioUrl.trim() !== '') 
@@ -16,46 +27,36 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ customAudioUrl }) => {
 
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const userManuallyPausedRef = useRef<boolean>(false);
-  const listenersCleanedRef = useRef<boolean>(false);
+  const listenersActiveRef = useRef<boolean>(false);
 
-  const isStartingRef = useRef<boolean>(false);
-
-  const cleanupListeners = useCallback(() => {
-    if (listenersCleanedRef.current) return;
-    listenersCleanedRef.current = true;
-    document.removeEventListener('pointerdown', handleInteraction);
-    document.removeEventListener('click', handleInteraction);
-    window.removeEventListener('start-romantic-music', handleCustomEvent);
+  // Remove interaction listeners once audio is successfully playing
+  const cleanupInteractionListeners = useCallback(() => {
+    if (!listenersActiveRef.current) return;
+    listenersActiveRef.current = false;
+    INTERACTION_EVENTS.forEach((evt) => {
+      window.removeEventListener(evt, handleAnyInteraction, true);
+      document.removeEventListener(evt, handleAnyInteraction, true);
+    });
   }, []);
 
-  const startPlayback = useCallback(() => {
+  const startPlayback = useCallback(async () => {
     userManuallyPausedRef.current = false;
-    if (isStartingRef.current) return;
+    const audio = audioElementRef.current;
+    if (!audio) return;
 
-    if (audioElementRef.current) {
-      isStartingRef.current = true;
-      audioElementRef.current.volume = 0.85;
-      audioElementRef.current.muted = isMuted;
-
-      const promise = audioElementRef.current.play();
-      if (promise !== undefined) {
-        promise
-          .then(() => {
-            setIsPlaying(true);
-            isStartingRef.current = false;
-            cleanupListeners();
-          })
-          .catch((e) => {
-            isStartingRef.current = false;
-            console.log('Autoplay waiting for touch:', e.message);
-          });
-      } else {
-        isStartingRef.current = false;
-      }
+    try {
+      audio.volume = 0.85;
+      audio.muted = isMuted;
+      await audio.play();
+      setIsPlaying(true);
+      cleanupInteractionListeners();
+    } catch (e: any) {
+      // Browser autoplay policy prevented direct unmuted playback without gesture
+      console.log('Autoplay deferred until first user interaction:', e?.message || e);
     }
-  }, [isMuted, cleanupListeners]);
+  }, [isMuted, cleanupInteractionListeners]);
 
-  const handleInteraction = useCallback(() => {
+  const handleAnyInteraction = useCallback(() => {
     if (!userManuallyPausedRef.current) {
       startPlayback();
     }
@@ -89,22 +90,28 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ customAudioUrl }) => {
     }
   };
 
+  // Main effect: start autoplay on page load & setup global interaction listeners
   useEffect(() => {
     userManuallyPausedRef.current = false;
-    listenersCleanedRef.current = false;
 
-    // 1. Try immediate autoplay
+    // 1. Attempt immediate autoplay on load
     startPlayback();
 
-    // 2. Global listeners on pointerdown and click
-    document.addEventListener('pointerdown', handleInteraction, { passive: true, once: true });
-    document.addEventListener('click', handleInteraction, { passive: true, once: true });
+    // 2. Attach global capture listeners to window & document for any user gesture
+    listenersActiveRef.current = true;
+    INTERACTION_EVENTS.forEach((evt) => {
+      window.addEventListener(evt, handleAnyInteraction, { capture: true, passive: true });
+      document.addEventListener(evt, handleAnyInteraction, { capture: true, passive: true });
+    });
+
+    // 3. Listen to explicit custom event (e.g. from envelope open or other UI triggers)
     window.addEventListener('start-romantic-music', handleCustomEvent);
 
     return () => {
-      cleanupListeners();
+      cleanupInteractionListeners();
+      window.removeEventListener('start-romantic-music', handleCustomEvent);
     };
-  }, [audioSrc, startPlayback, handleInteraction, handleCustomEvent, cleanupListeners]);
+  }, [audioSrc, startPlayback, handleAnyInteraction, handleCustomEvent, cleanupInteractionListeners]);
 
   return (
     <aside
@@ -115,8 +122,14 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ customAudioUrl }) => {
         ref={audioElementRef}
         src={audioSrc}
         loop
-        preload="none"
+        preload="auto"
+        autoPlay
         playsInline
+        onCanPlay={() => {
+          if (!isPlaying && !userManuallyPausedRef.current) {
+            startPlayback();
+          }
+        }}
         onEnded={() => {
           if (audioElementRef.current) {
             audioElementRef.current.currentTime = 0;
@@ -125,9 +138,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ customAudioUrl }) => {
         }}
         onPlay={() => setIsPlaying(true)}
         onPause={() => {
-          if (userManuallyPausedRef.current) {
-            setIsPlaying(false);
-          }
+          setIsPlaying(false);
         }}
       />
 
@@ -162,7 +173,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ customAudioUrl }) => {
       <button
         onClick={togglePlay}
         aria-label={isPlaying ? 'Pause background music' : 'Play romantic background music'}
-        className="w-8 h-8 rounded-full bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center transition-all shadow-sm active:scale-95"
+        className="w-8 h-8 rounded-full bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center transition-all shadow-sm active:scale-95 cursor-pointer"
       >
         {isPlaying ? (
           <span className="flex space-x-0.5">
@@ -179,7 +190,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ customAudioUrl }) => {
         <button
           onClick={toggleMute}
           aria-label={isMuted ? 'Unmute audio' : 'Mute audio'}
-          className="text-rose-400 hover:text-rose-600 p-1 transition-colors"
+          className="text-rose-400 hover:text-rose-600 p-1 transition-colors cursor-pointer"
         >
           {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
         </button>
